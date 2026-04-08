@@ -1460,11 +1460,6 @@ bool MailTransaction::DateTime(const char *buffer, int len, ProcessingHeadersToR
 	if(TimeOfDay(buffer, current_pos, remaining_len) == 0)
 		return false;
 
-	//проверить на следующие символы. Не должно быть ничего кроме пробелов и CRLF
-	/*for(int i=current_pos;i < len; i++){
-		if(buffer[i] != ' ' && buffer[i] != 9)
-			return false;
-	}*/
 	SearchNextNonWhitespaceChar(buffer, current_pos);
 	if(buffer[current_pos] != '\r')
 		return false;
@@ -1847,11 +1842,152 @@ void MailTransaction::ConvertToUppercase(char *header_field)
 	}
 }
 
+int MailTransaction::AssignCodeToTheHeader(const char *header)
+{
+	int code = -1;
+
+	if(strcmp(header,"FROM") == 0){
+		code = 0;
+	}
+	else if(strcmp(header,"SENDER") == 0){
+		code = 1;
+	}
+	else if(strcmp(header,"REPLY-TO") == 0){
+		code = 2;
+	}
+	else if(strcmp(header,"TO") == 0){
+		code = 3;
+	}	
+	else if(strcmp(header,"CC") == 0){
+		code = 4;
+	}	
+	else if(strcmp(header,"BCC") == 0){
+		code = 5;
+	}
+	else if(strcmp(header,"RESENT-FROM") == 0){
+		code = 6;
+	}
+	else if(strcmp(header,"RESENT-SENDER") == 0){
+		code = 7;
+	}
+	else if(strcmp(header,"RESENT-TO") == 0){
+		code = 8;
+	}	
+	else if(strcmp(header,"RESENT-CC") == 0){
+		code = 9;
+	}
+	else if(strcmp(header,"RESENT-BCC") == 0){
+		code = 10;
+	}
+	else if(strcmp(header,"MESSAGE-ID") == 0){
+		code = 11;
+	}
+	else if(strcmp(header,"IN-REPLY-TO") == 0){
+		code = 12;
+	}
+	else if(strcmp(header,"REFERENCES") == 0){
+		code = 13;
+	} 
+	else if(strcmp(header,"RESENT-MESSAGE-ID") == 0){
+		code = 14;
+	}
+	else if(strcmp(header,"ORIG-DATE") == 0){
+		code = 15;
+	}
+	else if(strcmp(header,"RESENT-DATE") == 0){
+		code = 16;	
+	}
+	else if(strcmp(header,"SUBJECT") == 0){
+		code = 17;
+	}
+	else if(strcmp(header,"COMMENTS") == 0){
+		code = 18;
+	}
+	else if(strcmp(header,"KEYWORDS") == 0){
+		code = 19;	
+	}
+
+	return code;
+}
+
+bool MailTransaction::ProcessingAddressHeaders(const char *unfolding_header_value, int read_count, struct HeaderValueInfo &addresses, int header_code)
+{
+	switch(header_code){
+		case 0: if(HeaderFrom(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+		case 1: if(HeaderSender(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+		case 2: if(HeaderReplyTo(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+		case 3: if(HeaderToCcBcc(unfolding_header_value, read_count, addresses, headers, &ProcessingHeadersToRFC5322::AddTo) == false)
+					return false;
+				break;
+		case 4: if(HeaderToCcBcc(unfolding_header_value, read_count, addresses, headers, &ProcessingHeadersToRFC5322::AddCc) == false)
+					return false;
+				break;
+		case 5: if(HeaderToCcBcc(unfolding_header_value, read_count, addresses, headers, &ProcessingHeadersToRFC5322::AddBcc) == false)
+					return false;
+				break;
+		case 6: if(HeaderResentFrom(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+		case 7: if(HeaderResentSender(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+		case 8: if(HeaderResentToCcBcc(unfolding_header_value, read_count, addresses, headers, &ProcessingHeadersToRFC5322::AddResentTo) == false)
+					return false;
+				break;
+		case 9: if(HeaderResentToCcBcc(unfolding_header_value, read_count, addresses, headers, &ProcessingHeadersToRFC5322::AddResentCc) == false)
+					return false;
+				break;
+		case 10: if(HeaderResentToCcBcc(unfolding_header_value, read_count, addresses, headers, &ProcessingHeadersToRFC5322::AddResentBcc) == false)
+					return false;
+				break;
+	}
+	return true;
+}
+
+bool MailTransaction::ProcessingIdentificationHeaders(const char *unfolding_header_value, int read_count, struct HeaderValueInfo &addresses, int header_code)
+{
+	switch(header_code){
+		case 11:if(HeaderMessageID(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+		case 12:if(HeaderInReplyTo(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+		case 13: if(HeaderReferences(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+		case 14: if(HeaderResentMessageID(unfolding_header_value, read_count, addresses) == false)
+					return false;
+				break;
+	}
+
+	return true;
+}
+
+bool MailTransaction::ProcessingDateHeaders(const char *unfolding_header_value, int read_count, int header_code)
+{
+	switch(header_code){
+		case 15:if(DateTime(unfolding_header_value, read_count, headers, &ProcessingHeadersToRFC5322::AddDate) == false)
+					return false;
+				break;
+		case 16:if(DateTime(unfolding_header_value, read_count, headers, &ProcessingHeadersToRFC5322::AddResentDate) == false)
+					return false;	
+				break;
+	}
+	return true;
+}
+
+
 bool MailTransaction::AnalizeHeader(int start_index, int read_count)
 {
 	int header_value_start= -1, header_field_end = -1;
 	bool result = false;
-	char *unfolding_header_value = NULL;
 	HeaderValueInfo addresses;
 
 	char *buffer = mail_data + start_index;
@@ -1867,111 +2003,43 @@ bool MailTransaction::AnalizeHeader(int start_index, int read_count)
 	
 	read_count = read_count - header_value_start; //исключаем длину поля заголовка
 
-	unfolding_header_value = new char[read_count+1]; // +1 это для '\0'
-								      //
+	char *unfolding_header_value = new char[read_count+1]; // +1 это для '\0'
+								      
 	result = SeparateUnfoldingHeader(buffer + header_value_start, unfolding_header_value, read_count);
 	if(result == false){
 		delete [] unfolding_header_value;
 		return 0;
 	}
 
-	if(strcmp(buffer,"from") == 0){
-		result = HeaderFrom(unfolding_header_value, read_count, addresses);
-		if(result == 0)
-			return 0;
-	}
-	else if(strcmp(buffer,"sender") == 0){
-		if(HeaderSender(unfolding_header_value, read_count, addresses) == 0)
-			return 0;
-	}
-	else if(strcmp(buffer,"reply-to") == 0){
-		if(HeaderReplyTo(unfolding_header_value, read_count, addresses) == 0)
-			return 0;
-	}
-	else if(strcmp(buffer,"to") == 0){
-		if(HeaderToCcBcc(unfolding_header_value, read_count, addresses, headers, &ProcessingHeadersToRFC5322::AddTo) == 0)
-			return 0;
-	}	
-	else if(strcmp(buffer,"cc") == 0){
-		if(HeaderToCcBcc(unfolding_header_value, read_count, addresses, headers, &ProcessingHeadersToRFC5322::AddCc) == 0)
-			return 0;
-	}	
-	else if(strcmp(buffer,"bcc") == 0){
-		if(HeaderToCcBcc(unfolding_header_value, read_count, addresses, headers, 
-					&ProcessingHeadersToRFC5322::AddBcc) == 0)
-			return 0;
-	}
-	else if(strcmp(buffer,"message-id") == 0){
-		if(IdentificationFields(unfolding_header_value, addresses) == false)
-			return 0;
-		if(HeaderMessageID(unfolding_header_value, read_count, addresses) == 0)
-			return 0;
+	int header_code = AssignCodeToTheHeader(buffer);
 
+	if(header_code >= 0 && header_code <= 10){
+		if(ParseAddressHeaderField(unfolding_header_value, addresses) == false)
+			return false;
+		if(ProcessingAddressHeaders(unfolding_header_value, read_count, addresses, header_code) == false)
+			return false;
+		
 	}
-	else if(strcmp(buffer,"in-reply-to") == 0){
+	else if(header_code >= 11 && header_code <= 14){
 		if(IdentificationFields(unfolding_header_value, addresses) == false)
-			return 0;
-		if(HeaderInReplyTo(unfolding_header_value, read_count, addresses) == 0)
-			return 0;
+			return false;
+		if(ProcessingIdentificationHeaders(unfolding_header_value, read_count, addresses, header_code) == false)
+			return false;
 	}
-	else if(strcmp(buffer,"references") == 0){
-		if(IdentificationFields(unfolding_header_value, addresses) == false)
-			return 0;
-		if(HeaderReferences(unfolding_header_value, read_count, addresses) == 0)
-			return 0;
-	} 
-	else if(strcmp(buffer,"resent-from") == 0){
-		if(HeaderResentFrom(unfolding_header_value, read_count, addresses) == 0)
-			return 0;
+	else if(header_code >= 15 && header_code <= 16){
+		if(ProcessingDateHeaders(unfolding_header_value, read_count, header_code) == false)
+			return false;
 	}
-	else if(strcmp(buffer,"resent-sender") == 0){
-		if(HeaderResentSender(unfolding_header_value, read_count, addresses) == 0)
-			return 0;
+	else if(header_code >= 17 && header_code <= 19){
+		switch(header_code){
+			case 17:headers.AddSubject(unfolding_header_value, read_count); break;
+			case 18:headers.AddComments(unfolding_header_value, read_count); break;
+			case 19:headers.AddKeywords(unfolding_header_value, read_count); break;
+		}	
 	}
-	else if(strcmp(buffer,"resent-to") == 0){
-		if(HeaderResentToCcBcc(unfolding_header_value, read_count, addresses, headers, 
-					&ProcessingHeadersToRFC5322::AddResentTo) == 0)
-			return 0;
-	}	
-	else if(strcmp(buffer,"resent-cc") == 0){
-		if(HeaderResentToCcBcc(unfolding_header_value, read_count, addresses, headers, 
-					&ProcessingHeadersToRFC5322::AddResentCc) == 0)
-			return 0;
-	}	
-	else if(strcmp(buffer,"resent-bcc") == 0){
-		if(HeaderResentToCcBcc(unfolding_header_value, read_count, addresses, headers, 
-					&ProcessingHeadersToRFC5322::AddResentBcc) == 0)
-			return 0;
+	else if(header_code == -1){
+		return false;
 	}
-	else if(strcmp(buffer,"resent-message-id") == 0){
-		if(IdentificationFields(unfolding_header_value, addresses) == 0)
-			return 0;
-		if(HeaderResentMessageID(unfolding_header_value, read_count, addresses) == 0)
-			return 0;
-	}
-	else if(strcmp(buffer,"orig-date") == 0){
-		if(DateTime(unfolding_header_value, read_count, headers, &ProcessingHeadersToRFC5322::AddDate) == 0)
-			return 0;
-		}
-	else if(strcmp(buffer,"resent-date") == 0){
-		if(DateTime(unfolding_header_value, read_count, headers, &ProcessingHeadersToRFC5322::AddDate) == 0)
-			return 0;	
-	}
-	else if((strcmp(buffer,"subject") == 0) || (strcmp(buffer,"comments") == 0) || (strcmp(buffer,"keywords") == 0)){
-		if((SeparateUnfoldingHeader(buffer + header_value_start, unfolding_header_value, read_count)) == true){
-			if(strcmp(buffer,"subject") == 0) {
-				headers.AddSubject(unfolding_header_value, read_count); 
-			}
-			else if(strcmp(buffer,"comments") == 0) {
-				headers.AddComments(unfolding_header_value, read_count);
-			}
-			else if(strcmp(buffer,"keywords") == 0)	{
-				headers.AddKeywords(unfolding_header_value, read_count);
-			}
-		}
-	}
-
-
 	/*if(result == false)
 		delete [] unfolding_header_value;
 		*/
@@ -2135,11 +2203,6 @@ int GetMessageForData()
 }
 
 
-
-
-
-
-/*
 int main()
 {
 	int res = 0;
@@ -2148,7 +2211,7 @@ int main()
 	printf("%d\n", res);
 	return 1;
 
-}*/
+}
 
 //To: Кому непосредственно адресовано письмо
 //Cc: Кому предназначена копия письма как бы для простого информирования ( они видят получаетелей из To и Cc )

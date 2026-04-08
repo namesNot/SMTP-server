@@ -976,6 +976,7 @@ INSTANTIATE_TEST_SUITE_P(
 	::testing::Values(
 		std::make_tuple("local@domain.ru\r\n", true),
 		std::make_tuple("\"local\"@domain.ru\r\n", true),
+		std::make_tuple("\"loc\\\"al\"@domain.ru\r\n", true),
 		std::make_tuple("\"Bob\" @domain.ru\r\n", true),
 		std::make_tuple("any addr, any addr \r\n", true),
 		std::make_tuple("any addr ,any addr \r\n", true),
@@ -990,7 +991,8 @@ INSTANTIATE_TEST_SUITE_P(
 		std::make_tuple("(comment local@domain.ru; \r\n", false),
 		std::make_tuple("local@domain.ru\" \r\n", false),
 		std::make_tuple("\"local@domain.ru \r\n", false),
-		std::make_tuple("lo\\cal@domain \r\n", false)
+		std::make_tuple("local\\@domain \r\n", false),
+		std::make_tuple("local@domain\\\r\n", false)
 	)
 );
 
@@ -1012,6 +1014,7 @@ INSTANTIATE_TEST_SUITE_P(
 		std::make_tuple("(comment\\))<any addr>	\r\n", true),
 		std::make_tuple("(comment(comment)) <any addr>\r\n", true),
 		std::make_tuple("<> \r\n", true),
+		
 	
 		std::make_tuple("<local@domain.ru> Bob (comment)\r\n", true), // Такие варианты отработают, но функции по анализу
 		std::make_tuple("\"CEO\" <local@domain.ru> \"Bob\"\r\n", true), //локальной и доменной части выдадут ошибку, тк
@@ -1026,7 +1029,10 @@ INSTANTIATE_TEST_SUITE_P(
 		std::make_tuple("<local@domain.ru<\r\n", false),
 		std::make_tuple("\"Bo<any addr>\r\n", false),
 		std::make_tuple("(comment))<any addr>\r\n", false),
-		std::make_tuple("((comment) <any addr>\r\n", false)
+		std::make_tuple("((comment) <any addr>\r\n", false),
+		std::make_tuple("<local\\@domain.ru>\r\n", false),
+		std::make_tuple(" \\<<any addr>\r\n", false)
+		
 	)
 );
 
@@ -1045,6 +1051,7 @@ INSTANTIATE_TEST_SUITE_P(
 		std::make_tuple("group:local@domain;, addr2\r\n", true),
 		std::make_tuple("group:<addr1>;	,group2:addr2;\r\n", true),
 		std::make_tuple("group:<addr1>;,group2:addr2;\r\n", true),
+		
 
 
 		std::make_tuple("group:local@domain\r\n", false),
@@ -1054,7 +1061,8 @@ INSTANTIATE_TEST_SUITE_P(
 		std::make_tuple("local@domain; \r\n", false),
 		std::make_tuple("group:local@domain; addr2\r\n", false),
 		std::make_tuple("(comment) group:local@domain;\r\n", false),
-		std::make_tuple(" <group>:local@domain;\r\n", false)
+		std::make_tuple(" <group>:local@domain;\r\n", false),
+		std::make_tuple("group\\:<addr1>;,group2:addr2;\r\n", false)
 		)
 );
 
@@ -1095,6 +1103,7 @@ INSTANTIATE_TEST_SUITE_P(
 		std::make_tuple("Bob <any_addr>,\r\n <local@domain.ru>\r\n", "Bob <any_addr>, <local@domain.ru>\r\n", true), 
 		std::make_tuple("local@domain.ru,\r\n local@domain.ru\r\n", "local@domain.ru, local@domain.ru\r\n", true),
 		std::make_tuple("\"local\r\n \"@domain.ru \r\n", "\"local \"@domain.ru \r\n", true),
+		std::make_tuple("head\\er:addr\\ess \r\n", "head\\er:addr\\ess \r\n", true),
 
 
 		std::make_tuple("\r\n", "", false),

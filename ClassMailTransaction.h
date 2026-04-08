@@ -179,6 +179,10 @@ private:
 	
 	int AppendMailData(const char *buffer, int len); //изменил имя
 	
+	int AssignCodeToTheHeader(const char *header);
+	bool ProcessingAddressHeaders(const char *unfolding_header_value, int read_count, struct HeaderValueInfo &addresses, int header_code);
+	bool ProcessingIdentificationHeaders(const char *unfolding_header_value, int read_count, struct HeaderValueInfo &addresses, int header_code);
+	bool ProcessingDateHeaders(const char *unfolding_header_value, int read_count, int header_code);
 
 public:
 	bool AnalizeHeader(int start_index, int read_count);
