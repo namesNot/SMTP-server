@@ -937,16 +937,20 @@ INSTANTIATE_TEST_SUITE_P(
 		std::make_tuple("<addr> <addr2>\t<addr3>\r\n", 3, true),
 		std::make_tuple("<addr><addr2>\t<addr3>\r\n", 3, true),
 		std::make_tuple("<addr> <>\r\n",2, true),
+		std::make_tuple("<addr><addr2>\r\n", 2, true),
 	
 		std::make_tuple("<\"user name\"@domain.ru>\r\n",1, false),
 		std::make_tuple("<local@[11.22.33.44]>\r\n",1, false),
+		
 		std::make_tuple("addr_spec\r\n",1, false),
 		std::make_tuple("addr>\r\n",1, false),
 		std::make_tuple("<addr\r\n",1, false),
 		std::make_tuple(">addr\r\n",1, false),
 		std::make_tuple("<addr<\r\n",1, false),
-		std::make_tuple("<addr>,<addr2>", 2, false),
-		std::make_tuple("<addr><addr2>", 2, false)
+		std::make_tuple("<addr>,<addr2>\r\n", 2, false),
+		std::make_tuple("CEO <addr>\r\n", 2, false),
+		std::make_tuple("CEO <addr>  Bob <addr2>\r\n", 2, false),
+		std::make_tuple("\"CEO\" <addr><addr2>\r\n", 2, false)
 	)
 );
 
