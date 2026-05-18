@@ -190,6 +190,14 @@ public:
 	int FindEndOfMailData(const char *buffer, int read_count);
 	
 public:
+
+	bool GetCRLF_received(){return CRLF_received;}
+	void SetCRLF_received(bool value){CRLF_received = value;}
+	bool GetDot_received(){return dot_received;}
+	void SetDot_received(bool value){dot_received = value;}
+	bool GetCR_received(){return CR_received;}
+	void SetCR_received(bool value){CR_received = value;}
+
 	MailTransaction();
 	~MailTransaction(){ if(address_sender) delete [] address_sender;}
 	void AddAddressSender(char *str, int len);

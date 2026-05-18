@@ -2163,8 +2163,8 @@ int MailTransaction::FindEndOfMailData(const char *buffer, int read_count)
 }
 
 
-MailTransaction tr;
-int GetMessageForData()
+//MailTransaction tr;
+/*int GetMessageForData()
 {
 	int read_count, result;
 
@@ -2200,7 +2200,7 @@ int GetMessageForData()
 	}while(result > 0); // при result == 1, продолжаем
 			    
 	return result;
-}
+}*/
 
 
 /*

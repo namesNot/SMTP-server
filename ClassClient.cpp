@@ -305,15 +305,55 @@ int Client::AnalyzeMessageForData(int read_count)
 bool Client::GetMessageForData()
 {
 	int read_count, result;
+
+	char *buffer = new char[100];
+	int size_buffer = 100;
+	
+		
+	read_count = read(socket, buffer, size_buffer);
+	
+	if(read_count == 0){ // соединение закрыто - удалить клиента
+		printf("соединеие закрыто\n");
+		//удалить клиента
+		//Destroy();
+		return 0;
+	}
+
+	int len_data = transaction.FindEndOfMailData(buffer, read_count);
+	if(len_data == 0) return 0;
+	if(len_data == -1) return -1;
+
+	//all_data_is_read = 1;
+	//there_is_data_to_send = 1;
+	
+	int start_index_header = 0, end_index_header = 0;
+	do{
+		result = transaction.FindNextHeaderField(start_index_header, end_index_header);
+		if(result != -1){
+			if(transaction.AnalizeHeader(start_index_header, end_index_header - start_index_header + 1) == 0){
+				return -1;
+			}
+		}
+		start_index_header = end_index_header + 1; //1 след символ
+	}while(result > 0); // при result == 1, продолжаем
+			    
+	return result;
+}
+
+/*
+bool Client::GetMessageForData()
+{
+	int read_count, result;
 	int chars_from_bufferCRLF = 0;
 	
-	/*if(transaction.IsDataInBufferCRLF()){
-		buffer[0] = '\0';
-		strcpy(buffer, transaction.GetBufferCRLF());
-		chars_from_bufferCRLF = strlen(transaction.GetBufferCRLF());
-	}*/
+//	if(transaction.IsDataInBufferCRLF()){
+//		buffer[0] = '\0';
+//		strcpy(buffer, transaction.GetBufferCRLF());
+//		chars_from_bufferCRLF = strlen(transaction.GetBufferCRLF());
+	//}
 		
 	//read_count = read(socket, buffer+chars_from_bufferCRLF, size_buffer10 - chars_from_bufferCRLF);
+	
 	read_count = read(socket, buffer, size_buffer);
 
 	if(read_count == 0){ // соединение закрыто - удалить клиента
@@ -335,7 +375,7 @@ bool Client::GetMessageForData()
 	there_is_data_to_send = 1;				
 	return 0;
 	//return AnalisysAnswer();
-}
+}*/
 
 
 bool Client::GetMessage()
